@@ -3,7 +3,8 @@
 
 #include <QMainWindow>
 #include <QGridLayout>
-
+#include <QLabel>
+#include <QTime>
 
 #include"gameboard.h"
 QT_BEGIN_NAMESPACE
@@ -19,21 +20,33 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    void Select_Starting_Method();
-    void Set_Button_Interface();
-    void createTopLayout(QVBoxLayout *);
-    void createGridLayout(QVBoxLayout *mainLayout);
-    void clearGridLayout();
+    void Select_Starting_Method();      //Seperate window for selecting method (size, random, input, file)
+    void createTopLayout(QVBoxLayout *);//create top interface(fill symbol, pause button, reset button, timer display)
+    void createGridLayout(QVBoxLayout *mainLayout); //create grid interface(buttons of size)
+    void clearGridLayout(); //at reseet remove empty the grid for reinit
+    void createInterface(); //makes top and grid layout
+    void setBackgroundColor(const QColor &color);   //change bg color at win
 private:
     GameBoard board;
     Ui::MainWindow *ui;
-    QGridLayout *gridLayout;
+    QGridLayout *gridLayout;    //store the grid
+    void storeOriginalPalette();    //save the org background color
+    void restoreOriginalPalette();  //restore org bg color
+    QPalette originalPalette;       //stores the orginal bg color for restoration
+
+    QLabel *elapsedTimeLabel; // QLabel for displaying elapsed time
+    QLabel *scoreLabel; // QLabel for displaying score
+
+    QTimer *timer;
+    QTime startTime;
+    int pausedTime = 0; // Initialize to 0
+    bool Pause; //pause/resume
 
 private slots:
     void onRadioButtonClicked();
     void onPauseButtonClicked();
     void onResetButtonClicked();
     void handleButtonClick();
-
+    void updateElapsedTime();
 };
 #endif // MAINWINDOW_H

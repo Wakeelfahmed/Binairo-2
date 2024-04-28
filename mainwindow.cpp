@@ -9,6 +9,10 @@
 #include <QLineEdit>
 #include <QDialogButtonBox>
 #include <QPushButton>
+#include <QLabel>
+#include <QTimer>
+#include <QTime>
+#include <QMessageBox>
 
 using namespace std;
 
@@ -43,7 +47,6 @@ unsigned int stoi_with_check(const string& str)
 
     else
         return 0;
-
 }
 
 // Poistaa tyhjät merkit (kuten ' ') annetusta merkkijonosta.
@@ -75,9 +78,8 @@ bool find_fill_symbol(string& str)
 // to be added and its position, until the game is over.
 bool play_game(GameBoard& board, string x_str, string y_str)
 {
-    board.print();
-    string rest_input = "0";
-    cout << "Enter two coordinates and a fill symbol: ";
+    string rest_input;
+    // cout << "Enter two coordinates and a fill symbol: ";
 
     // Luetaan x-koordinaatti merkkijonona ja tarkistetaan, oliko kyseessä
     // lopetuskomento
@@ -131,20 +133,22 @@ bool play_game(GameBoard& board, string x_str, string y_str)
     if(not board.add_symbol(x, y, rest_input.at(0)))
     {
         cout << CANT_ADD << endl;
+        QMessageBox::critical(nullptr, "Error", "Can't add. Please try valid position.");
         return false;
     }
-    else{    board.print();
-
+    else{
+        // Jos peli päättyy täyteen pelilautaan, pelaaja voitti
+        // If the game ends up to a totally filled gameboard, the player won
+        if(board.is_game_over()){
+            cout << WIN << endl;
+        }
+        // Jos annettu merkki voitiin lisätä, tulostetaan muuttunut pelilauta
+        // If the given symbol was possible to add, print the changed gameboard
+        board.print();
         return true;
-    }
-    // Jos annettu merkki voitiin lisätä, tulostetaan muuttunut pelilauta
-    // If the given symbol was possible to add, print the changed gameboard
-    board.print();
 
-    // Jos peli päättyy täyteen pelilautaan, pelaaja voitti
-    // If the game ends up to a totally filled gameboard, the player won
-    if(board.is_game_over())
-        cout << WIN << endl;
+
+    }
 }
 
 // Kysyy käyttäjältä pelilaudan täyttötapaa.
@@ -157,7 +161,7 @@ bool select_start(GameBoard& board)
 {
     string choice = "";
     cout << "Select start (R for random, I for input): ";
-    getline(cin, choice);
+    // getline(cin, choice);
     if(choice != "R" and choice != "r" and choice != "I" and choice != "i")
     {
         return false;
@@ -166,23 +170,18 @@ bool select_start(GameBoard& board)
     {
         string seed_string = "";
         cout << "Enter a seed value: ";
-        getline(cin, seed_string);
+        // getline(cin, seed_string);
         return board.fill_randomly(stoi_with_check(seed_string));
     }
     else // if(choice == "I" or choice == "i")
     {
         string input = "";
         cout << "Input: ";
-        getline(cin, input);
+        // getline(cin, input);
         return board.fill_from_input(input);
     }
 }
 
-void MainWindow::Select_Starting_Method()
-{
-    // createTopLayout();
-    // createGridLayout();
-}
 void MainWindow::clearGridLayout()
 {
     QLayoutItem *child;
@@ -195,24 +194,35 @@ void MainWindow::clearGridLayout()
         delete child;
     }
 }
+
 void MainWindow::createTopLayout(QVBoxLayout  *mainLayout)
 {
     QWidget *topWidget = new QWidget(this);
     QHBoxLayout *topLayout = new QHBoxLayout(topWidget);
 
-    QRadioButton *radioButton1 = new QRadioButton("Option 1");
-    QRadioButton *radioButton2 = new QRadioButton("Option 2");
+    QRadioButton *radioButton1 = new QRadioButton("0");
+    QRadioButton *radioButton2 = new QRadioButton("1");
+    radioButton1->setChecked(1);
+    QPushButton *pushButton1 = new QPushButton("Pause");
+    QPushButton *pushButton2 = new QPushButton("Reset");
 
-    QPushButton *pushButton1 = new QPushButton("Button 1");
-    QPushButton *pushButton2 = new QPushButton("Button 2");
+    scoreLabel = new QLabel("Score: 0");  // Create the QLabel dynamically
+    scoreLabel->setStyleSheet("QLabel { background-color: black; color: white; }");
 
-    QLineEdit *lineEdit = new QLineEdit();
+    elapsedTimeLabel = new QLabel("Time: 0 sec");  // Create the QLabel dynamically
+    elapsedTimeLabel->setStyleSheet("QLabel { background-color: black; color: white; }");
+
+    connect(radioButton1, &QRadioButton::clicked, this, &MainWindow::onRadioButtonClicked);
+    connect(radioButton2, &QRadioButton::clicked, this, &MainWindow::onRadioButtonClicked);
+    connect(pushButton1, &QPushButton::clicked, this, &MainWindow::onPauseButtonClicked);
+    connect(pushButton2, &QPushButton::clicked, this, &MainWindow::onResetButtonClicked);
 
     topLayout->addWidget(radioButton1);
     topLayout->addWidget(radioButton2);
     topLayout->addWidget(pushButton1);
     topLayout->addWidget(pushButton2);
-    topLayout->addWidget(lineEdit);
+    topLayout->addWidget(scoreLabel);
+    topLayout->addWidget(elapsedTimeLabel);
 
     topWidget->setLayout(topLayout);
 
@@ -224,14 +234,14 @@ void MainWindow::createGridLayout(QVBoxLayout *mainLayout)
     QWidget *gridWidget = new QWidget(this);
     gridLayout = new QGridLayout(gridWidget);
 
-    const int SIZE = 5; // Change this to your desired grid size
-
-    for (int row = 0; row < SIZE; ++row)
+    for (int row = 0; row < board.get_SIZE(); ++row)
     {
-        for (int col = 0; col < SIZE; ++col)
+        for (int col = 0; col < board.get_SIZE(); ++col)
         {
-            QPushButton *button = new QPushButton(QString("Button %1,%2").arg(row).arg(col));
-            gridLayout->addWidget(button, row, col);
+            board.buttons[row][col]->setObjectName(QString("Button %1%2").arg(row, 2, 10, QChar('0')).arg(col, 2, 10, QChar('0')));
+            board.buttons[row][col]->setMaximumSize(80, 80);  // Set maximum size for button
+            gridLayout->addWidget(board.buttons[row][col], row, col);
+            connect(board.buttons[row][col], &QPushButton::clicked, this, &MainWindow::handleButtonClick);
         }
     }
 
@@ -240,10 +250,7 @@ void MainWindow::createGridLayout(QVBoxLayout *mainLayout)
     mainLayout->addWidget(gridWidget); // Add grid layout to main layout
 }
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
-{
-    ui->setupUi(this);
-
+void MainWindow::createInterface(){
     QVBoxLayout *mainLayout = new QVBoxLayout(); // Create main layout
     createTopLayout(mainLayout); // Pass the main layout to createTopLayout
     createGridLayout(mainLayout); // Pass the main layout to createGridLayout
@@ -251,111 +258,43 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     QWidget *centralWidget = new QWidget(this); // Create a central widget
     centralWidget->setLayout(mainLayout); // Set main layout as central widget's layout
     setCentralWidget(centralWidget); // Set central widget
-
-
-//     ui->setupUi(this); // Assuming you have this line in your constructor
-
-    // Select_Starting_Method();
-
-//     // Create top layout elements
-//     QHBoxLayout *topLayout = new QHBoxLayout();
-
-//     QRadioButton *radioButton1 = new QRadioButton("0");
-//     radioButton1->setChecked(1);
-//     QRadioButton *radioButton2 = new QRadioButton("1");
-
-//     connect(radioButton1, &QRadioButton::clicked, this, &MainWindow::onRadioButtonClicked);
-//     connect(radioButton2, &QRadioButton::clicked, this, &MainWindow::onRadioButtonClicked);
-
-//     QPushButton *pushButton1 = new QPushButton("Pause");
-//     QPushButton *pushButton2 = new QPushButton("Reset");
-//     connect(pushButton1, &QPushButton::clicked, this, &MainWindow::onPauseButtonClicked);
-//     connect(pushButton2, &QPushButton::clicked, this, &MainWindow::onResetButtonClicked);
-
-//     QLineEdit *lineEdit = new QLineEdit();
-
-//     topLayout->addWidget(radioButton1);
-//     topLayout->addWidget(radioButton2);
-//     topLayout->addWidget(pushButton1);
-//     topLayout->addWidget(pushButton2);
-//     topLayout->addWidget(lineEdit);
-
-//     // Set maximum height for the top layout
-//     // radioButton1->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
-//     // radioButton2->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
-//     // pushButton1->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
-//     // pushButton2->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
-//     // lineEdit->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Maximum);
-
-//     // // Create grid layout for buttons
-//     // QGridLayout *gridLayout = new QGridLayout();
-
-//     // // Create a QIcon object and set the icon from a file
-//     // QIcon icon(":/new/prefix1/Black.png");
-
-//     // // Set the icon to the button
-
-//     // // Resize the button to accommodate the icon
-//     // for (int row = 0; row < board.get_SIZE(); ++row) {
-//     //     for (int col = 0; col < board.get_SIZE(); ++col) {
-//     //         // button->setMaximumSize(80, 80);  // Set maximum size for button
-//     //         // button->setIcon(icon);
-//     //         // button->setIconSize(QSize(80, 80)); // Adjust the size as needed
-//     //         // Apply stylesheet for circular appearance
-//     //         // button->setStyleSheet("QPushButton {  border-color: rgb(66, 69, 183);  border-width: 3px;  border-style: solid;  border-radius: 40px;  margin:30px;  padding:30px;}");
-//     //         board.buttons[row][col]->setObjectName(QString("Button %1%2").arg(row, 2, 10, QChar('0')).arg(col, 2, 10, QChar('0')));
-//     //         gridLayout->addWidget(board.buttons[row][col], row, col);
-//     //         connect(board.buttons[row][col], &QPushButton::clicked, this, &MainWindow::handleButtonClick);
-//     //     }
-//     // }
-
-//     // // Create a central widget and set layouts
-//     QWidget *centralWidget = new QWidget(this);
-//     QVBoxLayout *mainLayout = new QVBoxLayout();
-//     centralWidget->setLayout(mainLayout);
-
-//     mainLayout->addLayout(topLayout);
-//     // mainLayout->addLayout(gridLayout);
-
-//     setCentralWidget(centralWidget);
-//     Set_Button_Interface();
 }
 
-void MainWindow::Set_Button_Interface(){
-    QGridLayout *gridLayout = new QGridLayout();
+void MainWindow::storeOriginalPalette()
+{
+    originalPalette = this->palette();
+}
 
-    // Create a QIcon object and set the icon from a file
-    QIcon icon(":/new/prefix1/Black.png");
+void MainWindow::restoreOriginalPalette()
+{
+    this->setPalette(originalPalette);
+}
 
-    // Set the icon to the button
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
+{
+    Pause = false;
 
-    // Resize the button to accommodate the icon
-    for (int row = 0; row < board.get_SIZE(); ++row) {
-        for (int col = 0; col < board.get_SIZE(); ++col) {
-            // button->setMaximumSize(80, 80);  // Set maximum size for button
-            // button->setIcon(icon);
-            // button->setIconSize(QSize(80, 80)); // Adjust the size as needed
-            // Apply stylesheet for circular appearance
-            // button->setStyleSheet("QPushButton {  border-color: rgb(66, 69, 183);  border-width: 3px;  border-style: solid;  border-radius: 40px;  margin:30px;  padding:30px;}");
-            board.buttons[row][col]->setObjectName(QString("Button %1%2").arg(row, 2, 10, QChar('0')).arg(col, 2, 10, QChar('0')));
-            gridLayout->addWidget(board.buttons[row][col], row, col);
-            connect(board.buttons[row][col], &QPushButton::clicked, this, &MainWindow::handleButtonClick);
-        }
-    }
+    timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(updateElapsedTime()));
 
-    // Create a central widget and set layouts
-    QWidget *centralWidget = new QWidget(this);
-    QVBoxLayout *mainLayout = new QVBoxLayout();
-    centralWidget->setLayout(mainLayout);
+    // Start the timer when the MainWindow is created
+    timer->start(1000); // 1000 ms = 1 second
 
-    mainLayout->addLayout(gridLayout);
+    startTime = QTime::currentTime();
 
-    setCentralWidget(centralWidget);
+    // Example QLabel to display elapsed time
+    elapsedTimeLabel = new QLabel(this);
+    setCentralWidget(elapsedTimeLabel);
+
+    updateElapsedTime(); // Update the label initially
+
+    storeOriginalPalette();
+    Select_Starting_Method();
 }
 
 void MainWindow::Select_Starting_Method(){
     QDialog dialog;
-    // Create a dialog with radio buttons for Random and Input
+    // Create a dialog with radio buttons for Random, Input and File
     dialog.setWindowTitle("Enter Size & Select Starting Method");
 
     QFormLayout layout(&dialog);
@@ -397,44 +336,75 @@ void MainWindow::Select_Starting_Method(){
 
     if (dialog.exec() == QDialog::Accepted) {
         board.set_SIZE(SizeInputLine.text().toInt());
-        board.init();
-        if (randomButton.isChecked()) {
-            // Handle Random Method
-            int seed = InputLine.text().toInt();
+        if(board.get_SIZE() < 2){
+            QMessageBox::critical(nullptr, "Size too small", "Please try again.");
+            board.cleanup();
+            Select_Starting_Method();
+        }
+        else{
+            board.init();
+            createInterface();
+            if (randomButton.isChecked()) {
+                // Handle Random Method
+                int seed = InputLine.text().toInt();
+                if(InputLine.text() == "")
+                {
+                    qDebug() << "Missing seed value.";
+                    board.cleanup();
+                    QMessageBox::critical(nullptr, "Error", "Missing seed value. Please try again.");
+                    Select_Starting_Method();   //Retake inputs
 
-            if (board.fill_randomly(seed)){
-                qDebug() << "Random selected with seed:" << seed;
-            //     Init_Input_done = true;
-            //     resetTimer();
+                }
+                else if (board.fill_randomly(seed)){
+                    qDebug() << "Random selected with seed:" << seed;
+                    startTime = QTime::currentTime();
+                    show();
+                }
+                else{
+                    qDebug() << "Invalid seed value.";
+                    board.cleanup();
+                    QMessageBox::critical(nullptr, "Error", "Invalid seed value. Please try again.");
+                    Select_Starting_Method();   //Retake inputs
+                }
+
+            } else if (inputButton.isChecked()) {
+                // Handle Input option
+                QString input = InputLine.text();
+
+                if (board.fill_from_input(input.toStdString())){
+                    qDebug() << "Input selected with input:" << input;
+                    startTime = QTime::currentTime();
+                    show();
+                }
+                else{
+                    qDebug() << "Invalid Input.";
+                    board.cleanup();
+                    QMessageBox::critical(nullptr, "Error", "Invalid Input. Please try again.\n Ensure input is enclose with \"");
+                    Select_Starting_Method();   //Retake inputs
+                }
             }
-            else{
-                // ToastWidget *toast = new ToastWidget();
-                // toast->showToast("Invalid seed value", 1000);
-                // qDebug() << "Invalid seed value.";
-                // randomButton.setChecked(false);
-                // Init_Input_done = false;
-                // Take_Board_Init_Input(); //Reopen this window to again get input
-            }
+            else if (fileButton.isChecked()) {
+                // Handle File option
 
-        } else if (inputButton.isChecked()) {
-            // Handle Random option
+                QString input = InputLine.text();
+                if(InputLine.text() == "")
+                {
+                    qDebug() << "Missing file name.";
+                    board.cleanup();
+                    QMessageBox::critical(nullptr, "Error", "Missing file name. Please try again.");
+                    Select_Starting_Method();   //Retake inputs
 
-            QString input = InputLine.text();
-
-            if (board.fill_from_input(input.toStdString())){
-                qDebug() << "Input selected with input:" << input;
-                // select_start(board, "i", input.toStdString());
-                // seed_or_input = input.toStdString();
-                // Init_Input_done = true;
-                // resetTimer();
-            }
-            else{
-                // ToastWidget *toast = new ToastWidget();
-                // toast->showToast("Invalid Input ", 1000);
-                qDebug() << "Invalid Input .";
-                //     Init_Input_done = false;
-                //     inputButton.setChecked(false);
-                //     Take_Board_Init_Input(); //Reopen this window to again get input
+                }
+                else if (board.fill_from_input(input.toStdString())){
+                    qDebug() << "File selected with filename:" << input;
+                    show();
+                }
+                else{
+                    qDebug() << "Invalid File Input.";
+                    board.cleanup();
+                    QMessageBox::critical(nullptr, "Error", "Invalid file. Please try again.\n Ensure input is enclose with \"");
+                    Select_Starting_Method();   //Retake inputs
+                }
             }
         }
     } else
@@ -453,8 +423,12 @@ void MainWindow::handleButtonClick(){
 
     if(play_game(board, to_string(y), to_string(x)))
     {
-        clickedButton->setText(QString::fromStdString(to_string(board.get_fillsymbol())));
+        board.buttons[x-1][y-1]->setText(QString::fromStdString(to_string(board.get_fillsymbol())));
+        board.set_score(board.get_SIZE() + 5);
+        scoreLabel->setText(QString("Score: %1").arg(board.get_SIZE()));
     }
+    if(board.is_game_over())
+        setBackgroundColor(Qt::green); // Set background color to green
 }
 
 void MainWindow::onRadioButtonClicked()
@@ -472,8 +446,43 @@ void MainWindow::onRadioButtonClicked()
 
 void MainWindow::onPauseButtonClicked()
 {
-    // Handle pause button click
-    qDebug() << "Pause button.";
+    if (Pause == false) {
+        if (timer->isActive()) {
+            // Pause the timer
+            timer->stop();
+
+            // Calculate elapsed time since start time
+            QTime currentTime = QTime::currentTime();
+            int elapsedSeconds = startTime.secsTo(currentTime);
+
+            // Store the elapsed time for resuming later
+            pausedTime = elapsedSeconds;
+            for (int row = 0; row < board.get_SIZE(); ++row)
+                for (int col = 0; col < board.get_SIZE(); ++col)
+                    board.buttons[row][col]->setEnabled(false);
+
+            qDebug() << "Game Paused.";
+            Pause = true;
+        }
+    } else {
+        if (!timer->isActive()) {
+            // Adjust the start time to resume from where it was paused
+            startTime = QTime::currentTime().addSecs(-pausedTime);
+
+            // Restart the timer
+            timer->start();
+
+            for (int row = 0; row < board.get_SIZE(); ++row) {
+                for (int col = 0; col < board.get_SIZE(); ++col) {
+                    if(board.buttons[row][col]->text() != "1" && board.buttons[row][col]->text() != "0")
+                        board.buttons[row][col]->setEnabled(true);
+                }
+            }
+
+            qDebug() << "Game Resumed.";
+            Pause = false;
+        }
+    }
 }
 
 void MainWindow::onResetButtonClicked()
@@ -481,9 +490,30 @@ void MainWindow::onResetButtonClicked()
     // Handle reset button click
     qDebug() << "Reset button.";
     board.cleanup();
+    restoreOriginalPalette();
     Select_Starting_Method();
 }
+
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::setBackgroundColor(const QColor &color)
+{
+    QPalette palette = this->palette();
+    palette.setColor(QPalette::Window, color);
+    this->setPalette(palette);
+}
+
+void MainWindow::updateElapsedTime()
+{
+    if(!board.is_game_over()){
+        // Calculate elapsed time since start time
+        QTime currentTime = QTime::currentTime();
+        int elapsedSeconds = startTime.secsTo(currentTime);
+
+        // Update the QLabel to display the elapsed time
+        elapsedTimeLabel->setText(QString("Time: %1 sec").arg(elapsedSeconds));
+    }
 }

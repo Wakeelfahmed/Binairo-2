@@ -4,7 +4,6 @@
 
 GameBoard::GameBoard()
 {
-    // init();
     SIZE = 6;
     fillsymbol = 0;
 }
@@ -61,11 +60,15 @@ bool GameBoard::fill_from_input(const std::string &input)
         {
         case '0': current_element = ZERO;
             buttons[i / SIZE][i % SIZE]->setText("0");
+            buttons[i / SIZE][i % SIZE]->setEnabled(false);
             break;
         case '1': current_element = ONE;
             buttons[i / SIZE][i % SIZE]->setText("1");
+            buttons[i / SIZE][i % SIZE]->setEnabled(false);
             break;
-        case ' ': current_element = EMPTY; break;
+        case ' ': current_element = EMPTY;
+            buttons[i / SIZE][i % SIZE]->setText(" ");
+                break;
         default: std::cout << "Wrong character" << std::endl; return false;
         }
 
@@ -152,6 +155,7 @@ bool GameBoard::add_symbol(unsigned int x, unsigned int y, char symbol_char)
     if(ok_adjacent_symbols() and
         ok_amount_of_symbols())
     {
+        buttons[y][x]->setEnabled(false);
         return true;
     }
     // If all was not fine after adding, making the index empty again
@@ -220,8 +224,12 @@ void GameBoard::print() const
 
 void GameBoard::init()
 {
+    Score = 0;
     std::vector<Element_type> row(SIZE, EMPTY);
+    buttons.clear();  // Clear the buttons vector
 
+    // Clear the board
+    board_.clear();
     for(unsigned int i = 0; i < SIZE; ++i)
     {
         board_.push_back(row);
@@ -246,6 +254,8 @@ void GameBoard::cleanup()
 
     // Clear the board
     board_.clear();
+
+    Score = 0;
 }
 
 
@@ -299,3 +309,8 @@ void GameBoard::set_fillsymbol(int symbol){ fillsymbol = symbol; }
 int GameBoard::get_SIZE() const { return SIZE; }
 
 void GameBoard::set_SIZE(int newSIZE){ SIZE = newSIZE; }
+
+int GameBoard::get_score() const { return Score; }
+
+void GameBoard::set_score(int newscore){ Score = newscore; }
+

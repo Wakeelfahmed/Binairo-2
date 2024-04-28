@@ -88,7 +88,13 @@ public:
     //Reset Button & board for reinit with new size
     void cleanup();
 
+    // Get the score
+    int get_score() const;
 
+    // Set the fillsymbol
+    void set_score(int newscore);
+
+    //This graphical component is required in Gameboard, as inital Setup of board is done here.
     std::vector<std::vector<QPushButton*>> buttons;
 
     // Inits the gameboard, i.e. fills it with EMPTYs.
@@ -121,6 +127,8 @@ private:
     int fillsymbol;
 
     int SIZE = 2 * NUMBER_OF_SYMBOLS;
+
+    int Score = 0;
 };
 
 #endif // GAMEBOARD_H
