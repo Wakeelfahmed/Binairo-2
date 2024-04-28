@@ -191,16 +191,10 @@ void MainWindow::createTopLayout(QVBoxLayout  *mainLayout)
     QWidget *topWidget = new QWidget(this);
     QHBoxLayout *topLayout = new QHBoxLayout(topWidget);
 
-    QRadioButton *radioButton1 = new QRadioButton("0");
-    QRadioButton *radioButton2 = new QRadioButton("1");
     radioButton1->setChecked(1);
-    QPushButton *pushButton1 = new QPushButton("Pause");
-    QPushButton *pushButton2 = new QPushButton("Reset");
 
-    scoreLabel = new QLabel("Score: 0");  // Create the QLabel dynamically
     scoreLabel->setStyleSheet("QLabel { background-color: black; color: white; }");
 
-    elapsedTimeLabel = new QLabel("Time: 0 sec");  // Create the QLabel dynamically
     elapsedTimeLabel->setStyleSheet("QLabel { background-color: black; color: white; }");
 
     connect(radioButton1, &QRadioButton::clicked, this, &MainWindow::onRadioButtonClicked);
@@ -264,6 +258,12 @@ void MainWindow::restoreOriginalPalette()
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     Pause = false;
+    radioButton1 = new QRadioButton("0");
+    radioButton2 = new QRadioButton("1");
+    elapsedTimeLabel = new QLabel("Time: 0 sec");  // Create the QLabel dynamically
+    scoreLabel = new QLabel("Score: 0");  // Create the QLabel dynamically
+    pushButton1 = new QPushButton("Pause");
+    pushButton2 = new QPushButton("Reset");
 
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(updateElapsedTime()));
@@ -493,6 +493,10 @@ void MainWindow::onPauseButtonClicked()
                 for (int col = 0; col < board.get_SIZE(); ++col)
                     board.buttons[row][col]->setEnabled(false);
 
+            pushButton2->setEnabled(false);
+            radioButton1->setEnabled(false);
+            radioButton2->setEnabled(false);
+
             qDebug() << "Game Paused.";
             QMessageBox::information(nullptr, "Information", "Game Paused");
             Pause = true;
@@ -511,6 +515,10 @@ void MainWindow::onPauseButtonClicked()
                         board.buttons[row][col]->setEnabled(true);
                 }
             }
+
+            pushButton2->setEnabled(true);
+            radioButton1->setEnabled(true);
+            radioButton2->setEnabled(true);
 
             qDebug() << "Game Resumed.";
             Pause = false;

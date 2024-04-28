@@ -5,6 +5,7 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QTime>
+#include <QRadioButton>     //for Input or Random or File option
 
 #include"gameboard.h"
 QT_BEGIN_NAMESPACE
@@ -28,10 +29,14 @@ public:
 private:
     GameBoard board;
     Ui::MainWindow *ui;
-    QGridLayout *gridLayout;    //store the grid
+    QGridLayout *gridLayout;        //store the grid
     void storeOriginalPalette();    //save the org background color
     void restoreOriginalPalette();  //restore org bg color
     QPalette originalPalette;       //stores the orginal bg color for restoration
+
+    QRadioButton *radioButton1, *radioButton2;
+
+    QPushButton *pushButton1, *pushButton2;
 
     QLabel *elapsedTimeLabel; // QLabel for displaying elapsed time
     QLabel *scoreLabel; // QLabel for displaying score
