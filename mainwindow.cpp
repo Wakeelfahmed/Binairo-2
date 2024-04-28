@@ -14,6 +14,12 @@
 #include <QTime>
 #include <QMessageBox>
 
+#include <QFile>
+#include <QTextStream>
+#include <QMessageBox>
+#include <QDebug>
+#include <cstdlib> // For rand()
+
 using namespace std;
 
 // Tulosteet
@@ -133,7 +139,7 @@ bool play_game(GameBoard& board, string x_str, string y_str)
     if(not board.add_symbol(x, y, rest_input.at(0)))
     {
         cout << CANT_ADD << endl;
-        QMessageBox::critical(nullptr, "Error", "Can't add. Please try valid position.");
+        QMessageBox::warning(nullptr, "Error", "Can't add. Please try valid position.");
         return false;
     }
     else{
@@ -146,8 +152,6 @@ bool play_game(GameBoard& board, string x_str, string y_str)
         // If the given symbol was possible to add, print the changed gameboard
         board.print();
         return true;
-
-
     }
 }
 
@@ -179,19 +183,6 @@ bool select_start(GameBoard& board)
         cout << "Input: ";
         // getline(cin, input);
         return board.fill_from_input(input);
-    }
-}
-
-void MainWindow::clearGridLayout()
-{
-    QLayoutItem *child;
-    while ((child = gridLayout->takeAt(0)) != nullptr)
-    {
-        if (child->widget())
-        {
-            delete child->widget();
-        }
-        delete child;
     }
 }
 
@@ -292,6 +283,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     Select_Starting_Method();
 }
 
+// Function to generate a random number within a given range
+int getRandomNumber(int min, int max) {
+    return min + rand() % (max - min + 1);
+}
+
 void MainWindow::Select_Starting_Method(){
     QDialog dialog;
     // Create a dialog with radio buttons for Random, Input and File
@@ -317,14 +313,17 @@ void MainWindow::Select_Starting_Method(){
     InputLine.setPlaceholderText("Enter Seed Value");
 
     // Connect radio buttons to slot or lambda function to update placeholder text
-    connect(&randomButton, &QRadioButton::clicked, [&InputLine] {
+    connect(&randomButton, &QRadioButton::clicked, [&InputLine, &SizeInputLine] {
         InputLine.setPlaceholderText("Seed Value");
+        SizeInputLine.setEnabled(true);
     });
-    connect(&inputButton, &QRadioButton::clicked, [&InputLine] {
+    connect(&inputButton, &QRadioButton::clicked, [&InputLine, &SizeInputLine] {
         InputLine.setPlaceholderText("Board Input");
+        SizeInputLine.setEnabled(true);
     });
-    connect(&fileButton, &QRadioButton::clicked, [&InputLine] {
-        InputLine.setPlaceholderText("File Name");
+    connect(&fileButton, &QRadioButton::clicked, [&InputLine, &SizeInputLine] {
+        InputLine.setPlaceholderText("Default_inputs.txt");
+        SizeInputLine.setEnabled(false);
     });
 
     // Dialog buttons
@@ -336,7 +335,7 @@ void MainWindow::Select_Starting_Method(){
 
     if (dialog.exec() == QDialog::Accepted) {
         board.set_SIZE(SizeInputLine.text().toInt());
-        if(board.get_SIZE() < 2){
+        if(board.get_SIZE() < 2 && !fileButton.isChecked()){
             QMessageBox::critical(nullptr, "Size too small", "Please try again.");
             board.cleanup();
             Select_Starting_Method();
@@ -379,31 +378,62 @@ void MainWindow::Select_Starting_Method(){
                 else{
                     qDebug() << "Invalid Input.";
                     board.cleanup();
-                    QMessageBox::critical(nullptr, "Error", "Invalid Input. Please try again.\n Ensure input is enclose with \"");
+                    QMessageBox::critical(nullptr, "Error", "Invalid Input. Please try again.\n Ensure input is enclosed with \"");
                     Select_Starting_Method();   //Retake inputs
                 }
             }
             else if (fileButton.isChecked()) {
                 // Handle File option
-
                 QString input = InputLine.text();
+                 input = "Default_inputs.txt";
+
+                QFile file(input);
                 if(InputLine.text() == "")
                 {
                     qDebug() << "Missing file name.";
                     board.cleanup();
-                    QMessageBox::critical(nullptr, "Error", "Missing file name. Please try again.");
+                    QMessageBox::critical(nullptr, "Error", "Missing file name. Ensure file is placed in build dir then try again.");
                     Select_Starting_Method();   //Retake inputs
 
                 }
-                else if (board.fill_from_input(input.toStdString())){
-                    qDebug() << "File selected with filename:" << input;
-                    show();
-                }
                 else{
-                    qDebug() << "Invalid File Input.";
-                    board.cleanup();
-                    QMessageBox::critical(nullptr, "Error", "Invalid file. Please try again.\n Ensure input is enclose with \"");
-                    Select_Starting_Method();   //Retake inputs
+                    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                        qDebug() << "Failed to open file:" << input;
+                        board.cleanup();
+                        QMessageBox::critical(nullptr, "Error", "File not found/Missing file. Please try again.");
+                        Select_Starting_Method();   //Retake inputs
+                    }
+                    else
+                    {
+                        QTextStream in(&file);
+                        vector<string> inputs;
+                        int lineCount = 0;
+                        while (!in.atEnd()) {
+                            QString line = in.readLine();
+                            inputs.push_back(line.toStdString());
+                            lineCount++;
+                        }
+                        file.close();
+
+                        int randomNumber = getRandomNumber(0, lineCount - 1); // Adjust range for array indexing
+
+                        board.cleanup();
+
+                        board.set_SIZE(sqrt(inputs[randomNumber].size() -2));
+                        board.init();
+                        createInterface();
+
+                        if (board.fill_from_input(inputs[randomNumber])){
+                            qDebug() << "File selected with filename:" << input;
+                            show();
+                        }
+                        else{
+                            qDebug() << "Invalid File Input.";
+                            board.cleanup();
+                            QMessageBox::critical(nullptr, "Error", "Invalid file. Please try again.\n Ensure input is enclose with \"");
+                            Select_Starting_Method();   //Retake inputs
+                        }
+                    }
                 }
             }
         }
@@ -427,8 +457,10 @@ void MainWindow::handleButtonClick(){
         board.set_score(board.get_SIZE() + 5);
         scoreLabel->setText(QString("Score: %1").arg(board.get_SIZE()));
     }
-    if(board.is_game_over())
+    if(board.is_game_over()){
         setBackgroundColor(Qt::green); // Set background color to green
+        QMessageBox::information(nullptr, "WON", "You have won the game.");
+    }
 }
 
 void MainWindow::onRadioButtonClicked()
@@ -462,6 +494,7 @@ void MainWindow::onPauseButtonClicked()
                     board.buttons[row][col]->setEnabled(false);
 
             qDebug() << "Game Paused.";
+            QMessageBox::information(nullptr, "Information", "Game Paused");
             Pause = true;
         }
     } else {

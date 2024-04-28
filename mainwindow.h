@@ -23,7 +23,6 @@ public:
     void Select_Starting_Method();      //Seperate window for selecting method (size, random, input, file)
     void createTopLayout(QVBoxLayout *);//create top interface(fill symbol, pause button, reset button, timer display)
     void createGridLayout(QVBoxLayout *mainLayout); //create grid interface(buttons of size)
-    void clearGridLayout(); //at reseet remove empty the grid for reinit
     void createInterface(); //makes top and grid layout
     void setBackgroundColor(const QColor &color);   //change bg color at win
 private:
